@@ -32,6 +32,60 @@ SOURCE_BRANCH="${CODEX_DESKTOP_SOURCE_BRANCH:-main}"
 BUILD_THREADS="${CODEX_DESKTOP_BUILD_THREADS:-0}"
 USER_DESKTOP_FILE="$HOME/.local/share/applications/codex-desktop.desktop"
 SYSTEM_DESKTOP_FILE="/usr/share/applications/codex-desktop.desktop"
+INSTALL_METHOD="source"
+REQUIRE_EXISTING_SOURCE=0
+CHECK_ONLY=0
+
+usage() {
+  cat <<'EOF'
+Usage: ./setup_codex_desktop.sh [options]
+
+Options:
+  --install-method source   build from the Codex Desktop source checkout
+  --source-dir <path>       override the source checkout
+  --require-existing-source
+                            fail instead of cloning a missing checkout
+  --check                   verify prerequisites without changing anything
+  -h, --help                show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --install-method)
+      [[ $# -ge 2 ]] || { error "--install-method requires a value"; exit 2; }
+      INSTALL_METHOD="$2"
+      shift 2
+      ;;
+    --source-dir)
+      [[ $# -ge 2 ]] || { error "--source-dir requires a path"; exit 2; }
+      SOURCE_DIR="$2"
+      shift 2
+      ;;
+    --require-existing-source)
+      REQUIRE_EXISTING_SOURCE=1
+      shift
+      ;;
+    --check)
+      CHECK_ONLY=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      error "Unknown option: $1"
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$INSTALL_METHOD" != "source" ]]; then
+  error "Codex Desktop supports only --install-method source"
+  exit 2
+fi
 
 require_command() {
   local command_name="$1"
@@ -44,6 +98,10 @@ require_command() {
 
 update_source() {
   if [[ ! -e "$SOURCE_DIR" ]]; then
+    if [[ "$REQUIRE_EXISTING_SOURCE" -eq 1 ]]; then
+      error "Required source checkout is missing: $SOURCE_DIR"
+      exit 1
+    fi
     info "Cloning Codex Desktop for Linux"
     mkdir -p "$(dirname "$SOURCE_DIR")"
     git clone --branch "$SOURCE_BRANCH" --single-branch "$SOURCE_URL" "$SOURCE_DIR"
@@ -119,6 +177,21 @@ require_command jq
 require_command make
 require_command makepkg
 require_command pacman
+
+if [[ "$CHECK_ONLY" -eq 1 ]]; then
+  if [[ ! -d "$SOURCE_DIR/.git" && ! -f "$SOURCE_DIR/.git" ]]; then
+    error "Source is not a Git checkout: $SOURCE_DIR"
+    exit 1
+  fi
+  for marker in install.sh Makefile; do
+    if [[ ! -r "$SOURCE_DIR/$marker" ]]; then
+      error "Source marker is missing or unreadable: $SOURCE_DIR/$marker"
+      exit 1
+    fi
+  done
+  ok "Codex Desktop source prerequisites are available"
+  exit 0
+fi
 
 update_source
 "$SCRIPT_DIR/cleanup_codex_desktop.sh"

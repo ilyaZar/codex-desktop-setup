@@ -49,3 +49,17 @@ package output from the source checkout. It does not remove the installed
 package, cached DMG, or current generated app.
 
 [linux-port]: https://github.com/ilysenko/codex-desktop-linux
+
+## Automation interface
+
+The Codex Desktop build remains source-only. Catalog and TUI callers may use:
+
+```bash
+./setup_codex_desktop.sh --install-method source \
+  --source-dir /path/to/codex-desktop-linux \
+  --require-existing-source
+./setup_codex_desktop.sh --check --source-dir /path/to/codex-desktop-linux
+```
+
+`--require-existing-source` prevents a selectively unsynced checkout from
+being cloned during a TUI run.
