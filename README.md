@@ -7,6 +7,7 @@ launcher.
 The setup delegates to the upstream build and only supplies local policy:
 
 - the generated runtime and native desktop entry are both named `Codex`
+- the desktop entry pins the real Codex CLI instead of a `mise` shim
 - the package updater is disabled so `workflow/setup_all.sh` owns updates
 - generated rollback copies and package files are removed after installation
 - the cached DMG and current `codex-app/` build remain available for reuse
@@ -31,12 +32,24 @@ CODEX_DESKTOP_SOURCE_DIR=~/src/codex-desktop-linux \
   ./setup_codex_desktop.sh
 ```
 
-`~/Dropbox/workflow/setup_all.sh` runs this setup by default. It can also be run
+`~/Syncthing/workflow/setup_all.sh` runs this setup by default. It can also be
+run
 on its own:
 
 ```bash
-~/Dropbox/workflow/setup_all.sh --only codex_desktop
+~/Syncthing/workflow/setup_all.sh --only codex_desktop
 ```
+
+If an Omarchy update changes GUI path resolution, restore only the managed
+desktop entry without rebuilding the package:
+
+```bash
+./setup_codex_desktop.sh --repair-launcher
+```
+
+The launcher defaults to
+`~/.local/share/mise/installs/codex/latest/bin/codex`. Set
+`CODEX_DESKTOP_CLI_PATH` to use a different real Codex executable.
 
 ## Cleanup
 
