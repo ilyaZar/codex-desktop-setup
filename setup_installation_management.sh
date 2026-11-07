@@ -1,18 +1,17 @@
 #!/bin/bash
-
 set -euo pipefail
 
 install_verify() {
-  [[ -x /usr/bin/codex-desktop ]] &&
-    [[ -x "$HOME/.local/share/mise/installs/codex/latest/bin/codex" ]] &&
-    grep -Fq \
-      "CODEX_CLI_PATH=$HOME/.local/share/mise/installs/codex/latest/bin/codex" \
-      "$HOME/.local/share/applications/codex-desktop.desktop"
+  local app_root
+  app_root="$(mise where codex-desktop 2>/dev/null)" || return 1
+  [[ -x "$app_root/bin/chatgpt" && -f "$app_root/official-package.txt" ]] &&
+    [[ -x "$HOME/.local/bin/codex-desktop" ]] &&
+    grep -Fq '# Managed by codex-desktop-setup' "$HOME/.local/bin/codex-desktop" &&
+    grep -Fq 'Comment=Official OpenAI desktop app' \
+      "$HOME/.local/share/applications/codex-desktop.desktop" &&
+    ! pacman -Q codex-desktop >/dev/null 2>&1
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  if install_verify; then
-    exit 0
-  fi
-  exit 1
+  install_verify
 fi

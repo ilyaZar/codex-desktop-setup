@@ -1,78 +1,52 @@
 # Codex Desktop Setup
 
-Build and install [Codex Desktop for Linux][linux-port] with the native product
-name `Codex`. This keeps it distinct from the `ChatGPT` web app in the Omarchy
-launcher.
+Install the official OpenAI Linux desktop app through Mise. Keep the launcher
+named `Codex` so it remains distinct from the existing ChatGPT web app.
+The setup lives in `codex-desktop-setup/`; there is no `codex-setup/` directory.
 
-The setup delegates to the upstream build and only supplies local policy:
-
-- the generated runtime and native desktop entry are both named `Codex`
-- the desktop entry pins the real Codex CLI instead of a `mise` shim
-- the package updater is disabled so `workflow/setup_all.sh` owns updates
-- generated rollback copies and package files are removed after installation
-- the cached DMG and current `codex-app/` build remain available for reuse
-
-The source checkout defaults to
-`~/Dropbox/projects/openAI/codex-desktop-linux`. A missing checkout is cloned
-from the [Linux port repository][linux-port].
-
-## Install
+## Install and update
 
 ```bash
-./setup_codex_desktop.sh
+workflow run --install codex_desktop
 ```
 
-The setup requires an interactive or cached `sudo` session when the generated
-native package is installed.
-
-Use a different source checkout when needed:
-
-```bash
-CODEX_DESKTOP_SOURCE_DIR=~/src/codex-desktop-linux \
-  ./setup_codex_desktop.sh
-```
-
-`~/Syncthing/workflow/setup_all.sh` runs this setup by default. It can also be
-run
-on its own:
+Or run `./setup_codex_desktop.sh` directly. The setup links `mise-plugin/` as
+`codex-desktop`, selects its latest published version globally, and installs a
+user launcher. The existing Mise `codex` tool remains the independent CLI.
 
 ```bash
-~/Syncthing/workflow/setup_all.sh --only codex_desktop
-```
-
-If an Omarchy update changes GUI path resolution, restore only the managed
-desktop entry without rebuilding the package:
-
-```bash
+mise upgrade codex-desktop
 ./setup_codex_desktop.sh --repair-launcher
+./setup_installation_management.sh
 ```
 
-The launcher defaults to
-`~/.local/share/mise/installs/codex/latest/bin/codex`. Set
-`CODEX_DESKTOP_CLI_PATH` to use a different real Codex executable.
+The local plugin uses Mise's shell plugin interface because its HTTP backend
+does not unpack Debian packages. It fetches OpenAI's signed `InRelease`, verifies
+it with the repository key shipped in OpenAI's official package, then checks
+the package index and download against their SHA256 values. The key fingerprint
+is `3BFA0E4AE8B8CC16A2D9BA684A3B4A566C4660E4`.
 
-## Cleanup
+Only versions currently listed in the signed repository can be newly installed.
+Existing Mise versions remain available until explicitly removed. Package
+downloads and extraction staging are temporary and are removed after each run.
+The plugin extracts the official payload without running Debian package hooks.
+Mise owns app updates; no apt repository is added to Arch.
 
-```bash
-./cleanup_codex_desktop.sh
-```
+Prerequisites: Linux x64 or ARM64, Mise, Python 3.11 or newer, curl, gpgv,
+bsdtar, and the desktop libraries required by the app. Installation checks the
+main executable's shared libraries. `--check` validates installer prerequisites.
+Arch/Omarchy is not formally supported by OpenAI's Linux preview.
 
-Cleanup removes only timestamped `codex-app.backup-*` directories and `dist/`
-package output from the source checkout. It does not remove the installed
-package, cached DMG, or current generated app.
+## User data and removal
 
-[linux-port]: https://github.com/ilysenko/codex-desktop-linux
+The official app uses the existing `~/.config/Codex` profile and `~/.codex`
+conversation/configuration data. Setup and removal never delete those paths.
+Close the desktop app before running `workflow run --remove codex_desktop`.
+The source checkout of the former community port is not removed by this setup.
 
-## Automation interface
+The September 2026 migration backup is under
+`/home-hdd-cold/iz/BACKUPS/apps/codex-chat-archives/optiplex/` in the dated
+`2026-09-06-official-app-migration/` directory. See its migration notes before
+restoring a profile or database over newer data.
 
-The Codex Desktop build remains source-only. Catalog and TUI callers may use:
-
-```bash
-./setup_codex_desktop.sh --install-method source \
-  --source-dir /path/to/codex-desktop-linux \
-  --require-existing-source
-./setup_codex_desktop.sh --check --source-dir /path/to/codex-desktop-linux
-```
-
-`--require-existing-source` prevents a selectively unsynced checkout from
-being cloned during a TUI run.
+[Official Linux documentation](https://learn.chatgpt.com/docs/linux/linux-app)
